@@ -31,3 +31,6 @@ if __name__ == '__main__':
     main()
 # grc time 1031
 # mcts time 3811
+# RLN 10 1548
+# RLN 50 6864
+# rl 50 3517

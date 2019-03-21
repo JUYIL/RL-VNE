@@ -3,6 +3,8 @@ from maker import extract_network
 from config import configure
 from evaluation import Evaluation
 from itertools import islice
+from Mine.nodemdp import NodeEnv
+from Mine.linkrf import nodepolicy
 
 
 def calculate_adjacent_bw(graph, u, kind='bw'):
@@ -44,16 +46,7 @@ class Substrate:
                 print("\nTry to map request%s: " % req_id)
                 if self.mapping(req, algorithm, arg):
                     print("Success!")
-                    # 子虚拟网络请求的映射
-                    # print("\nTry to map its child request: ")
-                    # total = total + 4
-                    # upper_req = event_queue2[req_id]
-                    # sub2 = copy.deepcopy(backup)
-                    # sub2.set_topology(req)
-                    # for i in range(4):
-                    #     if sub2.upper_mapping(upper_req, "grc", sub):
-                    #         print("Success!")
-                    #         success = success+1
+
 
             if req.graph['type'] == 1:
                 """a request which is ready to leave"""
@@ -62,52 +55,52 @@ class Substrate:
                     print("\nRelease the resources which are occupied by request%s" % req_id)
                     self.change_resource(req, 'release')
 
-    def upper_mapping(self, vnr, algorithm, sub):
-        """only for child virtual network requests"""
+    # def upper_mapping(self, vnr, algorithm, sub):
+    #     """only for child virtual network requests"""
+    #
+    #     # 如果刚开始映射，那么需要对所选用的算法进行配置
+    #     if self.agent is None:
+    #         self.agent = configure(self, algorithm)
+    #
+    #     node_map = self.agent.run_run(self, vnr, sub)
+    #
+    #     if len(node_map) == vnr.number_of_nodes():
+    #         link_map = {}
+    #         for vLink in vnr.edges:
+    #             vn_from = vLink[0]
+    #             vn_to = vLink[1]
+    #             sn_from = node_map[vn_from]
+    #             sn_to = node_map[vn_to]
+    #             self.no_solution = True
+    #             if nx.has_path(self.net, source=sn_from, target=sn_to):
+    #                 for path in k_shortest_path(self.net, sn_from, sn_to):
+    #                     if self.get_path_capacity(path) >= vnr[vn_from][vn_to]['bw']:
+    #                         link_map.update({vLink: path})
+    #                         self.no_solution = False
+    #                         break
+    #                     else:
+    #                         continue
+    #
+    #         if len(link_map) == vnr.number_of_edges():
+    #             self.change_resource(vnr, 'allocate')
+    #             return True
+    #         else:
+    #             return False
+    #     else:
+    #         return False
 
-        # 如果刚开始映射，那么需要对所选用的算法进行配置
-        if self.agent is None:
-            self.agent = configure(self, algorithm)
-
-        node_map = self.agent.run_run(self, vnr, sub)
-
-        if len(node_map) == vnr.number_of_nodes():
-            link_map = {}
-            for vLink in vnr.edges:
-                vn_from = vLink[0]
-                vn_to = vLink[1]
-                sn_from = node_map[vn_from]
-                sn_to = node_map[vn_to]
-                self.no_solution = True
-                if nx.has_path(self.net, source=sn_from, target=sn_to):
-                    for path in k_shortest_path(self.net, sn_from, sn_to):
-                        if self.get_path_capacity(path) >= vnr[vn_from][vn_to]['bw']:
-                            link_map.update({vLink: path})
-                            self.no_solution = False
-                            break
-                        else:
-                            continue
-
-            if len(link_map) == vnr.number_of_edges():
-                self.change_resource(vnr, 'allocate')
-                return True
-            else:
-                return False
-        else:
-            return False
-
-    def mapping(self, vnr, node_algorithm, arg):
+    def mapping(self, vnr, algorithm, arg):
         """two phrases:node mapping and link mapping"""
 
         self.evaluation.total_arrived += 1
 
         # mapping virtual nodes
-        node_map = self.node_mapping(vnr, node_algorithm, arg)
+        node_map = self.node_mapping(vnr, algorithm, arg)
 
         if len(node_map) == vnr.number_of_nodes():
             # mapping virtual links
             print("link mapping...")
-            link_map = self.link_mapping(vnr, node_map)
+            link_map = self.link_mapping(vnr, node_map,algorithm,arg)
             if len(link_map) == vnr.number_of_edges():
                 self.mapped_info.update({vnr.graph['id']: (node_map, link_map)})
                 self.change_resource(vnr, 'allocate')
@@ -125,32 +118,58 @@ class Substrate:
 
         print("node mapping...")
 
+        node_map={}
         # 如果刚开始映射，那么需要对所选用的算法进行配置
-        if self.agent is None:
-            self.agent = configure(self, algorithm, arg)
+        if algorithm!='RLNL':
+            if self.agent is None:
+                self.agent = configure(self, algorithm, arg)
+            node_map = self.agent.run(self, vnr)
+
+        else:
+            nodeenv = NodeEnv(self.net)
+            nodeenv.set_vnr(vnr)
+            nodep = nodepolicy(nodeenv.action_space.n, nodeenv.observation_space.shape)
+            nodeobservation=nodeenv.reset()
+            for vn_id in range(vnr.number_of_nodes()):
+                sn_id = nodep.choose_max_action(nodeobservation, nodeenv.sub,
+                                                vnr.nodes[vn_id]['cpu'],
+                                                vnr.number_of_nodes())
+                if sn_id == -1:
+                    break
+                else:
+                    # 执行一次action，获取返回的四个数据
+                    nodeobservation, _, done, info = nodeenv.step(sn_id)
+                    node_map.update({vn_id: sn_id})
 
         # 使用指定的算法进行节点映射并得到节点映射集合
-        node_map = self.agent.run(self, vnr)
+
 
         # 返回节点映射集合
         return node_map
 
-    def link_mapping(self, vnr, node_map):
+    def link_mapping(self, vnr, node_map,algorithm,arg):
         """求解链路映射问题"""
 
         link_map = {}
-        for vLink in vnr.edges:
-            vn_from = vLink[0]
-            vn_to = vLink[1]
-            sn_from = node_map[vn_from]
-            sn_to = node_map[vn_to]
-            if nx.has_path(self.net, source=sn_from, target=sn_to):
-                for path in k_shortest_path(self.net, sn_from, sn_to):
-                    if self.get_path_capacity(path) >= vnr[vn_from][vn_to]['bw']:
-                        link_map.update({vLink: path})
-                        break
-                    else:
-                        continue
+
+        if algorithm!='RLNL':
+            for vLink in vnr.edges:
+                vn_from = vLink[0]
+                vn_to = vLink[1]
+                sn_from = node_map[vn_from]
+                sn_to = node_map[vn_to]
+                if nx.has_path(self.net, source=sn_from, target=sn_to):
+                    for path in nx.all_shortest_paths(self.net, sn_from, sn_to):
+                        if self.get_path_capacity(path) >= vnr[vn_from][vn_to]['bw']:
+                            link_map.update({vLink: path})
+                            break
+                        else:
+                            continue
+        else:
+            if self.agent is None:
+                self.agent = configure(self, algorithm, arg)
+            link_map = self.agent.run(self, vnr,node_map)
+
 
         # 返回链路映射集合
         return link_map

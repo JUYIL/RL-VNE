@@ -14,7 +14,7 @@ def main():
 
     # Step2: 选择映射算法
     algorithm = 'rl'
-    arg = 10
+    arg = 100
 
     # Step3: 处理虚拟网络请求事件
     start = time.time()

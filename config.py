@@ -53,6 +53,6 @@ def configure(sub, name, arg):
                 num_epoch=arg,
                 batch_size=100)
         rlnl.train(training_set)
-        nodesaver = tf.train.Saver()
-        nodesaver.save(rlnl.sess, "./Mine/linkmodel/linkmodel.ckpt")
+        linksaver = tf.train.Saver()
+        linksaver.save(rlnl.sess, "./Mine/linkmodel/linkmodel.ckpt")
         return rlnl

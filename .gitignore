@@ -6,7 +6,5 @@ __pycache__/
 
 .idea
 venv/
-results/
-model_saved/
 networks-tmp/
 VNRequests/
