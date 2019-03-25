@@ -1,2 +1,2 @@
-Training time: 1.6744009425905015 hours
-10.9959135
+Training time: 1.3620910121997198 hours
+10.99232

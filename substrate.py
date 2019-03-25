@@ -4,7 +4,9 @@ from config import configure
 from evaluation import Evaluation
 from itertools import islice
 from Mine.nodemdp import NodeEnv
+from Mine.linkmdp import LinkEnv
 from Mine.linkrf import nodepolicy
+from Mine.linkrf import linkpolicy
 
 
 def calculate_adjacent_bw(graph, u, kind='bw'):
@@ -55,39 +57,7 @@ class Substrate:
                     print("\nRelease the resources which are occupied by request%s" % req_id)
                     self.change_resource(req, 'release')
 
-    # def upper_mapping(self, vnr, algorithm, sub):
-    #     """only for child virtual network requests"""
-    #
-    #     # 如果刚开始映射，那么需要对所选用的算法进行配置
-    #     if self.agent is None:
-    #         self.agent = configure(self, algorithm)
-    #
-    #     node_map = self.agent.run_run(self, vnr, sub)
-    #
-    #     if len(node_map) == vnr.number_of_nodes():
-    #         link_map = {}
-    #         for vLink in vnr.edges:
-    #             vn_from = vLink[0]
-    #             vn_to = vLink[1]
-    #             sn_from = node_map[vn_from]
-    #             sn_to = node_map[vn_to]
-    #             self.no_solution = True
-    #             if nx.has_path(self.net, source=sn_from, target=sn_to):
-    #                 for path in k_shortest_path(self.net, sn_from, sn_to):
-    #                     if self.get_path_capacity(path) >= vnr[vn_from][vn_to]['bw']:
-    #                         link_map.update({vLink: path})
-    #                         self.no_solution = False
-    #                         break
-    #                     else:
-    #                         continue
-    #
-    #         if len(link_map) == vnr.number_of_edges():
-    #             self.change_resource(vnr, 'allocate')
-    #             return True
-    #         else:
-    #             return False
-    #     else:
-    #         return False
+
 
     def mapping(self, vnr, algorithm, arg):
         """two phrases:node mapping and link mapping"""
@@ -160,15 +130,35 @@ class Substrate:
                 sn_to = node_map[vn_to]
                 if nx.has_path(self.net, source=sn_from, target=sn_to):
                     for path in nx.all_shortest_paths(self.net, sn_from, sn_to):
+                    # for path in k_shortest_path(self.net, sn_from, sn_to):
                         if self.get_path_capacity(path) >= vnr[vn_from][vn_to]['bw']:
                             link_map.update({vLink: path})
                             break
                         else:
                             continue
         else:
-            if self.agent is None:
-                self.agent = configure(self, algorithm, arg)
-            link_map = self.agent.run(self, vnr,node_map)
+            # if self.agent is None:
+            #     self.agent = configure(self, algorithm, arg)
+            # link_map = self.agent.run(self, vnr,node_map)
+            linkenv = LinkEnv(self.net)
+            linkenv.set_vnr(vnr)
+            linkp = linkpolicy(linkenv.action_space.n, linkenv.observation_space.shape)
+            linkob = linkenv.reset()
+            for link in vnr.edges:
+                linkenv.set_link(link)
+                vn_from = link[0]
+                vn_to = link[1]
+                sn_from = node_map[vn_from]
+                sn_to = node_map[vn_to]
+                bw = vnr[vn_from][vn_to]['bw']
+                if nx.has_path(linkenv.sub, sn_from, sn_to):
+                    linkaction = linkp.choose_max_action(linkob, linkenv.sub, bw, linkenv.linkpath, sn_from, sn_to)
+                    if linkaction == -1:
+                        break
+                    else:
+                        linkob, linkreward, linkdone, linkinfo = linkenv.step(linkaction)
+                        path = list(linkenv.linkpath[linkaction].values())[0]
+                        link_map.update({link: path})
 
 
         # 返回链路映射集合

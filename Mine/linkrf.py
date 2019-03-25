@@ -310,7 +310,7 @@ class LinkPolicy:
 
     def run(self, sub, req,node_map):
         """基于训练后的策略网络，直接得到每个虚拟网络请求的节点映射集合"""
-        linkenv=LinkEnv(sub)
+        linkenv=LinkEnv(sub.net)
         linkenv.set_vnr(req)
         linkob = linkenv.reset()
         link_map = {}
@@ -325,7 +325,7 @@ class LinkPolicy:
             if nx.has_path(linkenv.sub, sn_from, sn_to):
 
                 x = np.reshape(linkob, [1, linkob.shape[0], linkob.shape[1], 1])
-                linkaction = self.choose_action(linkob, linkenv.sub, bw, self.linkpath, sn_from, sn_to)
+                linkaction = self.choose_max_action(linkob, linkenv.sub, bw, self.linkpath, sn_from, sn_to)
                 if linkaction == -1:
                     break
                 else:
@@ -358,3 +358,54 @@ class LinkPolicy:
         reward = requested / occupied
 
         return reward
+
+class linkpolicy:
+    def __init__(self,n_actions, n_features):
+        self.n_actions = n_actions
+        self.n_features = n_features
+        self._build_net()
+        self.sess = tf.Session()
+        self.sess.run(tf.global_variables_initializer())
+
+    def _build_net(self):
+        with tf.name_scope('inputs'):
+            self.tf_obs = tf.placeholder(tf.float32, [None, self.n_actions, self.n_features, 1],
+                                         name="observations")
+
+        with tf.name_scope('conv'):
+            read=tf.train.NewCheckpointReader('./Mine/linkmodel/linkmodel.ckpt')
+
+            kernel=read.get_tensor('conv/weights')
+            conv = tf.nn.conv2d(input=self.tf_obs,
+                                filter=kernel,
+                                strides=(1, 1,self.n_features[1],1),
+                                padding='VALID')
+            biases=read.get_tensor('conv/bias')
+            conv1=tf.nn.relu(tf.nn.bias_add(conv,biases))
+            self.scores=tf.reshape(conv1,[-1,self.n_features[0]])
+
+        with tf.name_scope('output'):
+            self.probs=tf.nn.softmax(self.scores)
+
+    def choose_max_action(self, observation,sub, linkbw, linkpath,vfr,vto):
+        x = np.reshape(observation, [1, observation.shape[0], observation.shape[1], 1])
+        prob_weights = self.sess.run(self.scores,
+                                     feed_dict={self.tf_obs: x})
+
+        candidate_action = []
+        candidate_score = []
+        for index, score in enumerate(prob_weights.ravel()):
+            s_fr = list(linkpath[index].keys())[0][0]
+            s_to = list(linkpath[index].keys())[0][1]
+            v_fr = vfr
+            v_to = vto
+            if s_fr==v_fr and s_to==v_to and minbw(sub,list(linkpath[index].values())[0]) >= linkbw:
+                candidate_action.append(index)
+                candidate_score.append(score)
+        if len(candidate_action) == 0:
+            return -1
+        else:
+            action_index = candidate_score.index(np.max(candidate_score))
+            action = candidate_action[action_index]
+
+        return action

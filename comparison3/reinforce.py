@@ -246,7 +246,7 @@ class RL:
 
     def calculate_reward(self, sub, req, node_map):
 
-        link_map = sub.link_mapping(req, node_map)
+        link_map = sub.link_mapping(req, node_map,'rl',0)
         if len(link_map) == req.number_of_edges():
             requested, occupied = 0, 0
 

@@ -56,3 +56,16 @@ def configure(sub, name, arg):
         linksaver = tf.train.Saver()
         linksaver.save(rlnl.sess, "./Mine/linkmodel/linkmodel.ckpt")
         return rlnl
+
+# grc 53    0.3
+# mcts 4336 0.628
+# RLN 10 1632 0.66
+# RLN 50 6507 0.68
+# RLN 100 15241
+# rl 10 1679 0.67
+# rl 50 8359 0.69
+# rl 100 9655 0.71
+# RLN 10 t5 1650 0.7255
+# RLN 10 t6 2137 0.7425
+# RLN 10 T7 2289 0.7375
+# RLNL 14:00 29507-5000 0.8

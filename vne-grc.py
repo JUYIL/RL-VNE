@@ -23,7 +23,7 @@ def main():
 
     # Step4: 输出映射结果文件
     tool = Analysis()
-    tool.save_result(sub, '%s-VNE-0318.txt' % algorithm)
+    tool.save_result(sub, '%s-VNE-0325.txt' % algorithm)
 
 
 if __name__ == '__main__':

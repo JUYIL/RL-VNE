@@ -62,7 +62,7 @@ class State:
         node_map = {}
         for i in range(self.vnr.number_of_nodes()):
             node_map.update({i: self.chosen_ids[i]})
-        link_map = self.sub.link_mapping(self.vnr, node_map)
+        link_map = self.sub.link_mapping(self.vnr, node_map,'mcts',0)
         if len(link_map) == self.vnr.number_of_edges():
             requested, occupied = 0, 0
 

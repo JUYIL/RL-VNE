@@ -9,8 +9,9 @@ class Analysis:
         self.result_dir = 'results/'
         if not os.path.exists(self.result_dir):
             os.makedirs(self.result_dir)
-        self.algorithms = ['grc-VNE', 'mcts-VNE', 'rl-VNE', 'ml-VNE-single']
-        self.line_types = ['b:', 'r--', 'y-.', 'g-']
+        self.algorithms = ['grc-ts', 'mcts-ts', 'rl-ts',  'RIM-ts', 'RLN-ts','RLNL-ts']
+        # self.algorithms = ['rl-ts', 'RLN-t5-ts', 'RLN-t6-ts', 'RLN-t7-ts']
+        self.line_types = ['b:', 'r--', 'y-.', 'g-','c:','m:']
         self.metric_names = {'acceptance ratio': 'Acceptance Ratio',
                              'average revenue': 'Long Term Average Revenue',
                              'average cost': 'Long Term Average Cost',
@@ -30,30 +31,43 @@ class Analysis:
     def read_result(self, filename):
         """读取结果文件"""
 
-        with open(self.result_dir + filename) as f:
-            lines = f.readlines()
+        if filename == "RIM-ts.txt":
+            with open('results/RIM-ts.dat') as file_object:
+                lines = file_object.readlines()
+            t, acceptance, revenue, cost, r_to_c, nodeuti, linkuti = [], [], [], [], [], [], []
+            for line in lines[1:]:
+                time, _, _, ar, _, _, ac, _, anut, _, alut, acp, _, _, rc = [float(x) for x in line.split('	')]
+                t.append(time)
+                acceptance.append(acp)
+                revenue.append(ar)
+                cost.append(ac)
+                r_to_c.append(rc)
+                nodeuti.append(anut)
+                linkuti.append(alut)
+        else:
+            with open(self.result_dir + filename) as f:
+                lines = f.readlines()
 
-        t, acceptance, revenue, cost, r_to_c, node_stress, link_stress = [], [], [], [], [], [], []
-        count = 0
-        for line in lines:
-            count = count + 1
-            a, b, c, d, e, f, g = [float(x) for x in line.split()]
-            t.append(a)
-            acceptance.append(b)
-            revenue.append(c / a)
-            cost.append(d / a)
-            r_to_c.append(e)
-            node_stress.append(f)
-            link_stress.append(g)
+            t, acceptance, revenue, cost, r_to_c, nodeuti, linkuti = [], [], [], [], [], [], []
+            for line in lines:
+                a, b, c, d, e, f, g = [float(x) for x in line.split()]
+                t.append(a)
+                acceptance.append(b)
+                revenue.append(c / a)
+                cost.append(d / a)
+                r_to_c.append(e)
+                nodeuti.append(f)
+                linkuti.append(g)
 
-        return t, acceptance, revenue, cost, r_to_c, node_stress, link_stress
+        return t, acceptance, revenue, cost, r_to_c, nodeuti, linkuti
+
 
     def draw_result(self):
         """绘制实验结果图"""
 
         results = []
         for alg in self.algorithms:
-            results.append(self.read_result(self.result_dir + alg + '-new.txt'))
+            results.append(self.read_result( alg + '.txt'))
 
         index = 0
         for metric, title in self.metric_names.items():
@@ -64,13 +78,14 @@ class Analysis:
                 y = results[alg_id][index]
                 plt.plot(x, y, self.line_types[alg_id], label=self.algorithms[alg_id])
             plt.xlim([0, 50000])
-            if metric == 'acceptance ratio' or metric == 'node utilization' or metric == 'link utilization':
+            if metric == 'acceptance ratio' :
+                # or metric == 'node utilization' or metric == 'link utilization':
                 plt.ylim([0, 1])
             plt.xlabel("time", fontsize=12)
             plt.ylabel(metric, fontsize=12)
             plt.title(title, fontsize=15)
             plt.legend(loc='best', fontsize=12)
-            # plt.savefig(self.result_dir + metric + '.png')
+            plt.savefig(self.result_dir + metric + '.png')
         plt.show()
 
     def draw_topology(self, graph, filename):

@@ -24,13 +24,8 @@ def main():
 
     # Step4: 输出映射结果文件
     tool = Analysis()
-    tool.save_result(sub, '%s-VNE-0320-%s.txt' % (algorithm, arg))
+    tool.save_result(sub, '%s-VNE-0321-%s-t7-2.txt' % (algorithm, arg))
 
 
 if __name__ == '__main__':
     main()
-# grc time 1031
-# mcts time 3811
-# RLN 10 1548
-# RLN 50 6864
-# rl 50 3517
