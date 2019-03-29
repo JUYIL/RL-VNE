@@ -24,7 +24,7 @@ class NodeEnv(gym.Env):
         self.n_action = sub.number_of_nodes()
         self.sub = copy.deepcopy(sub)
         self.action_space = spaces.Discrete(self.n_action)
-        self.observation_space = spaces.Box(low=0, high=1, shape=(self.n_action, 7), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(self.n_action, 6), dtype=np.float32)
         self.state = None
         self.actions = []
         self.degree = []
@@ -36,9 +36,9 @@ class NodeEnv(gym.Env):
         self.eg = []
         for k in nx.eigenvector_centrality(sub).values():
             self.eg.append(k)
-        self.be = []
-        for s in nx.betweenness_centrality(sub).values():
-            self.be.append(s)
+        # self.be = []
+        # for s in nx.betweenness_centrality(sub).values():
+        #     self.be.append(s)
         self.vnr = None
 
     def set_sub(self, sub):
@@ -72,7 +72,8 @@ class NodeEnv(gym.Env):
         self.state = (cpu_remain,
                       bw_all_remain,
                       self.degree,
-                      avg_dst,self.cln,self.eg,self.be)
+                      avg_dst,self.cln,self.eg)
+        # ,self.be)
         return np.vstack(self.state).transpose(), 0.0, False, {}
 
     def reset(self):
@@ -90,5 +91,6 @@ class NodeEnv(gym.Env):
         self.state = (cpu_remain,
                       bw_all_remain,
                       self.degree,
-                      avg_dst,self.cln,self.eg,self.be)
+                      avg_dst,self.cln,self.eg)
+        # ,self.be)
         return np.vstack(self.state).transpose()

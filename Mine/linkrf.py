@@ -308,9 +308,11 @@ class LinkPolicy:
                 f.write(str(value))
                 f.write('\n')
 
-    def run(self, sub, req,node_map):
+    def run(self, sub, req,node_map,link_env):
         """基于训练后的策略网络，直接得到每个虚拟网络请求的节点映射集合"""
-        linkenv=LinkEnv(sub.net)
+        # linkenv=LinkEnv(sub.net)
+        linkenv = link_env
+        linkenv.set_sub(sub.net)
         linkenv.set_vnr(req)
         linkob = linkenv.reset()
         link_map = {}
@@ -369,7 +371,7 @@ class linkpolicy:
 
     def _build_net(self):
         with tf.name_scope('inputs'):
-            self.tf_obs = tf.placeholder(tf.float32, [None, self.n_actions, self.n_features, 1],
+            self.tf_obs = tf.placeholder(tf.float32, [None,  self.n_features[0], self.n_features[1], 1],
                                          name="observations")
 
         with tf.name_scope('conv'):
