@@ -23,7 +23,7 @@ def configure(sub, name, arg):
         rl = RL(sub=sub,
                 n_actions=sub.net.number_of_nodes(),
                 n_features=4,
-                learning_rate=0.05,
+                learning_rate=0.005,
                 num_epoch=arg,
                 batch_size=100)
         rl.train(training_set)
@@ -57,8 +57,15 @@ def configure(sub, name, arg):
         linksaver.save(rlnl.sess, "./Mine/linkmodel/linkmodel.ckpt")
         return rlnl
 
-# grc 53    0.3
+# grc 116 0.71
 # mcts 4336 0.628
+# RLN 10 t6
+# RLN 10 t6
+# RLN 10 T7
+# rl 10 1679 0.64
+# rl 50 8359 0.69
+# rl 100 8688 0.72
+
 # RLN 10 T6 2289 0.7375
 # RLN 50 T6 3668 0.71
 # RLN 100 15241

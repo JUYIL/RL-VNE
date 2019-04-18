@@ -11,6 +11,7 @@ def main():
     sub_filename = 'subts.txt'
     sub = Substrate(network_files_dir, sub_filename)
     event_queue1 = simulate_events_one('VNRequest/', 2000)
+    # event_queue1 = simulate_events_one('Mine//', 2000)
 
     # Step2: 选择映射算法
     algorithm = 'RLN'
@@ -24,7 +25,7 @@ def main():
 
     # Step4: 输出映射结果文件
     tool = Analysis()
-    tool.save_result(sub, '%s-VNE-0321-%s-t6-1.txt' % (algorithm, arg))
+    tool.save_result(sub, '%s-VNE-0410-%s-cacln-1.txt' % (algorithm, arg))
 
 
 if __name__ == '__main__':

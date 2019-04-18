@@ -14,7 +14,7 @@ def main():
 
     # Step2: 选择映射算法
     algorithm = 'rl'
-    arg = 100
+    arg = 10
 
     # Step3: 处理虚拟网络请求事件
     start = time.time()
@@ -24,7 +24,7 @@ def main():
 
     # Step4: 输出映射结果文件
     tool = Analysis()
-    tool.save_result(sub, '%s-VNE-0321-%s.txt' % (algorithm, arg))
+    tool.save_result(sub, '%s-VNE-0409-%s.txt' % (algorithm, arg))
 
 
 if __name__ == '__main__':

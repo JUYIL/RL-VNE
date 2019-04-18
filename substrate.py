@@ -7,6 +7,7 @@ from Mine.nodemdp import NodeEnv
 from Mine.linkmdp import LinkEnv
 from Mine.linkrf import nodepolicy
 from Mine.linkrf import linkpolicy
+import copy
 
 
 def calculate_adjacent_bw(graph, u, kind='bw'):
@@ -37,7 +38,7 @@ class Substrate:
 
     def handle(self, queue, algorithm, arg=0):
 
-        self.linkenv = LinkEnv(self.net)
+        # self.linkenv = LinkEnv(self.net)
 
         for req in queue:
 
@@ -120,24 +121,45 @@ class Substrate:
 
         link_map = {}
 
-        if algorithm != 'RLNL':
+        if algorithm == 'grc':
+            sub_copy1 = copy.deepcopy(self.net)
             for vLink in vnr.edges:
-                vn_from = vLink[0]
-                vn_to = vLink[1]
-                sn_from = node_map[vn_from]
-                sn_to = node_map[vn_to]
-                if nx.has_path(self.net, source=sn_from, target=sn_to):
-                    for path in nx.all_shortest_paths(self.net, sn_from, sn_to):
-                        if self.get_path_capacity(path) >= vnr[vn_from][vn_to]['bw']:
-                            link_map.update({vLink: path})
-                            break
-                        else:
-                            continue
-        else:
+                vn_from, vn_to = vLink[0], vLink[1]
+                resource = vnr[vn_from][vn_to]['bw']
+                # 剪枝操作，先暂时将那些不满足当前待映射虚拟链路资源需求的底层链路删除
+                sub_tmp = copy.deepcopy(sub_copy1)
+                sub_edges = []
+                for sLink in sub_tmp.edges:
+                    sub_edges.append(sLink)
+                for edge in sub_edges:
+                    sn_from, sn_to = edge[0], edge[1]
+                    if sub_tmp[sn_from][sn_to]['bw_remain'] <= resource:
+                        sub_tmp.remove_edge(sn_from, sn_to)
+
+                # 在剪枝后的底层网络上寻找一条可映射的最短路径
+                sn_from, sn_to = node_map[vn_from], node_map[vn_to]
+                if nx.has_path(sub_tmp, source=sn_from, target=sn_to):
+                    path = k_shortest_path(sub_tmp, sn_from, sn_to, 1)[0]
+                    link_map.update({vLink: path})
+
+                    # 这里的资源分配是暂时的
+                    start = path[0]
+                    for end in path[1:]:
+                        bw_tmp = sub_copy1[start][end]['bw_remain'] - resource
+                        sub_copy1[start][end]['bw_remain'] = round(bw_tmp, 6)
+                        start = end
+                else:
+                    break
+
+            # 返回链路映射集合
+
+            return link_map
+
+        if algorithm == 'RLNL':
             if self.agent is None:
                 self.agent = configure(self, algorithm, arg)
-            # link_map = self.agent.run(self, vnr, node_map)
-            link_map = self.agent.run(self, vnr, node_map, self.linkenv)
+            # link_map = self.agent.run(self, vnr, node_map, self.linkenv)
+
             # linkenv = LinkEnv(self.net)
             # linkenv.set_vnr(vnr)
             # linkp = linkpolicy(linkenv.action_space.n, linkenv.observation_space.shape)
@@ -157,6 +179,21 @@ class Substrate:
             #             linkob, linkreward, linkdone, linkinfo = linkenv.step(linkaction)
             #             path = list(linkenv.linkpath[linkaction].values())[0]
             #             link_map.update({link: path})
+
+        else:
+            for vLink in vnr.edges:
+                vn_from = vLink[0]
+                vn_to = vLink[1]
+                sn_from = node_map[vn_from]
+                sn_to = node_map[vn_to]
+                if nx.has_path(self.net, source=sn_from, target=sn_to):
+                    for path in nx.all_shortest_paths(self.net, sn_from, sn_to):
+                        if self.get_path_capacity(path) >= vnr[vn_from][vn_to]['bw']:
+                            link_map.update({vLink: path})
+                            break
+                        else:
+                            continue
+
 
         # 返回链路映射集合
         return link_map

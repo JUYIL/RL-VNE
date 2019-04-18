@@ -36,9 +36,13 @@ class NodeEnv(gym.Env):
         self.eg = []
         for k in nx.eigenvector_centrality(sub).values():
             self.eg.append(k)
-        # self.be = []
-        # for s in nx.betweenness_centrality(sub).values():
-        #     self.be.append(s)
+        self.be = []
+        for s in nx.betweenness_centrality(sub).values():
+            self.be.append(s)
+        cpu_all = []
+        for u in range(self.n_action):
+            cpu_all.append(self.sub.nodes[u]['cpu'])
+        self.cpu_all = (cpu_all - np.min(cpu_all)) / (np.max(cpu_all) - np.min(cpu_all))
         self.vnr = None
 
     def set_sub(self, sub):
@@ -69,11 +73,12 @@ class NodeEnv(gym.Env):
         bw_all_remain = (bw_all_remain - np.min(bw_all_remain)) / (np.max(bw_all_remain) - np.min(bw_all_remain))
         avg_dst = (avg_dst - np.min(avg_dst)) / (np.max(avg_dst)-np.min(avg_dst))
 
-        self.state = (cpu_remain,
+        self.state = (self.cpu_all,
+                      cpu_remain,
                       bw_all_remain,
                       self.degree,
-                      avg_dst,self.cln,self.eg)
-        # ,self.be)
+                      avg_dst,self.cln)
+        # ,self.eg,self.be)
         return np.vstack(self.state).transpose(), 0.0, False, {}
 
     def reset(self):
@@ -85,12 +90,14 @@ class NodeEnv(gym.Env):
             cpu_remain.append(self.sub.nodes[u]['cpu_remain'])
             bw_all_remain.append(calculate_adjacent_bw(self.sub, u, 'bw_remain'))
 
+
         cpu_remain = (cpu_remain - np.min(cpu_remain)) / (np.max(cpu_remain) - np.min(cpu_remain))
         bw_all_remain = (bw_all_remain - np.min(bw_all_remain)) / (np.max(bw_all_remain) - np.min(bw_all_remain))
         avg_dst = np.zeros(self.n_action).tolist()
-        self.state = (cpu_remain,
+        self.state = (self.cpu_all,
+                      cpu_remain,
                       bw_all_remain,
                       self.degree,
-                      avg_dst,self.cln,self.eg)
-        # ,self.be)
+                      avg_dst,self.cln)
+        # ,self.eg,self.be)
         return np.vstack(self.state).transpose()
